@@ -4,96 +4,56 @@ from cassandra.cluster import Cluster
 from fastapi import FastAPI
 from pydantic import BaseModel
 from starlette.responses import RedirectResponse, JSONResponse
+from cassandra.cqlengine.management import sync_table
 
-from model import MyModel
+# from model import MyModel
+# from . import db, model
+import db, model, dto
 
 
 USERPROFILE_DOC_TYPE = "userprofile"
 
 
-# def get_bucket():
-#     cluster = Cluster(
-#         "couchbase://couchbasehost:8091?fetch_mutation_tokens=1&operation_timeout=30&n1ql_timeout=300"
-#     )
-#     authenticator = PasswordAuthenticator("username", "password")
-#     cluster.authenticate(authenticator)
-#     bucket: Bucket = cluster.open_bucket("bucket_name", lockmode=LOCKMODE_WAIT)
-#     bucket.timeout = 30
-#     bucket.n1ql_timeout = 300
-#     return bucket
-
-# cluster = Cluster(['172.17.0.2'])
-# cluster = Cluster(['0.0.0.0'], port=9042)
-cluster = Cluster(['127.0.0.1'], port=9042)
-# cluster = Cluster(['cas1'], port=9042)
-# cluster = Cluster(['106.196.27.89'])
-# cluster = Cluster()
-session = cluster.connect('cityinfo')
-session.execute('USE cityinfo')
-rows = session.execute('SELECT * FROM cities')
-for row in rows:
-    print(row.id, "-", row.name, "-", row.country)
+# cluster = Cluster(['127.0.0.1'], port=9042)
+# session = cluster.connect('cityinfo')
+# session.execute('USE cityinfo')
+# rows = session.execute('SELECT * FROM cities')
+# for row in rows:
+#     print(row.id, "-", row.name, "-", row.country)
 
 
+# Product = models.Product
+# ProductScrapeEvent = models.ProductScrapeEvent
+Cities = model.Cities
 
-class User(BaseModel):
-    username: str
-    email: Union[str, None] = None
-    full_name: Union[str, None] = None
-    disabled: Union[bool, None] = None
-
-
-class UserInDB(User):
-    type: str = USERPROFILE_DOC_TYPE
-    hashed_password: str
-
-
-# def get_user(bucket: Bucket, username: str):
-#     doc_id = f"userprofile::{username}"
-#     result = bucket.get(doc_id, quiet=True)
-#     if not result.value:
-#         return None
-#     user = UserInDB(**result.value)
-#     return user
-
-
-# FastAPI specific code
 app = FastAPI()
 
+session = None
 
-# @app.get("/users/{username}", response_model=User)
-# def read_user(username: str):
-#     bucket = get_bucket()
-#     user = get_user(bucket=bucket, username=username)
-#     return user
-
-@app.get("/models/{table}")
-async def get_models(table: str):
-    """
-    Return all models
-    """
-    rows = session.execute("SELECT * FROM {};".format(table))
-    data = {'items': {}}
-    for row in rows:
-        data['items'][row.id] = row.value
-    data['count'] = len(data['items'])
-    return JSONResponse(
-        data,
-        status_code=200
-    )
+@app.on_event("startup")
+def on_startup():
+    global session
+    session = db.get_session()
+    # sync_table(Product)
+    # sync_table(ProductScrapeEvent)
+    sync_table(Cities)
 
 
-@app.post("/model/{table}")
-async def post_model(table: str, item: MyModel):
-    """
-    Add a new model in the table
-    """
-    returned_value = session.execute(
-        "INSERT INTO {} (id, value) VALUES ({}, {});".format(table, item.id, item.value)
-    )
-    return JSONResponse(
-        {'detail': "model has been added"},
-        status_code=200
-    )
+
+@app.get("/cities")
+def cities_list_view():
+    return list(Cities.objects.all())
+    # return Cities.objects.all()
+
+
+@app.post("/cities")
+def cities_create_view(data: dto.CitiesSchema):
+    # city = Cities.create(**data)
+    # city = Cities.create(data)
+    # data_dict = data.__dict__
+    # city = Cities.create(data_dict)
+    city = Cities.create(id=5, name=data.name, country=data.country)
+    city.save()
+    return city
 
 
