@@ -40,6 +40,19 @@ class Cities(Model): # -> table
     id = columns.Integer(primary_key=True)
     name = columns.Text()
     country = columns.Text()
+
+
+    class config:
+        orm_mode = True
+
+
+class States(Model):
+    __keyspace__ = "cityinfo"
+
+    # id = columns.Integer(primary_key=True)
+    uuid = columns.UUID(primary_key=True)
+    name = columns.Text()
+    # state = columns.Text()
     
 
     class config:
