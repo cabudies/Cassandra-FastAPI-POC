@@ -50,17 +50,20 @@ def states_list_view(
 ):
     query = state_table
 
-    # name = None
+    name = None
     name = "Punjab"
 
     if name:
         # query = query.objects.filter(state_table.name == name)
-        query = query.objects.filter(name = name)
-        result = query.get()
+        query = query.objects.filter(uuid = 'ecc8515a-ac15-435e-9ccc-b93664d6e80c')
+        result = query
+        # query = query.filter(name = name)
+        # result = query.get()
     else:
         query = query.objects
         result = query.all()
 
+    # result = query.objects.all()
     return list(result)
 
 
@@ -68,7 +71,10 @@ def states_list_view(
 def states_create_view(data: dto.StatesSchema):
     new_uuid = uuid.uuid1()
     state = state_table.create(uuid=new_uuid, name=data.name)
-    state.save()
+
+    # state = state_table.create(name=data.name)
+
+    # state.save()
     return state
 
 
